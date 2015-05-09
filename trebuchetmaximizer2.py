@@ -26,6 +26,6 @@ class TrebMax(genetic.Individual):
     def __repr__(self):
         return self.chromosome.__repr__()
    
-if True:
+if __name__ == "__main__":
     env = genetic.Environment(TrebMax, maxgenerations=4000, optimum=1.0, mutation_rate=.017, size = 100)
     env.run()
