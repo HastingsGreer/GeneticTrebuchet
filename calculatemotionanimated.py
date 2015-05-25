@@ -8,8 +8,8 @@ import time
 
 pygame.init()
 def magnitude(vector):
-    MagnitudeSquared=(vector.getT())*(vector)
-    return (MagnitudeSquared.item(0))**(.5)
+    magnitudeSquared=(vector.getT())*(vector)
+    return (magnitudeSquared.item(0))**(.5)
 
 
 
@@ -19,7 +19,7 @@ class Particle:
         self.v = velocity
         self.m = mass
         self.f=0
-        self.Constraints=[]
+        self.constraints=[]
         self.radius=3+np.log(mass)
         self.color=color
     def draw(self, surface, transform, thickness=4):
@@ -27,30 +27,30 @@ class Particle:
 
 
 class Force:
-    def AddOwnForce(self):
+    def addOwnForce(self):
         print "you forgot to redefine AddOwnForce"
 
 
 class Gravity(Force):
-    def __init__(self, targetparticle, forcevector):
-        self.target=targetparticle
-        self.gravityvector=forcevector
+    def __init__(self, targetParticle, forceVector):
+        self.target=targetParticle
+        self.gravityVector=forceVector
 
-    def AddOwnForce(self):
-        self.target.f=self.target.f+self.gravityvector*self.target.m
+    def addOwnForce(self):
+        self.target.f=self.target.f+self.gravityVector*self.target.m
 
 
     
 
 
 class Spring(Force):
-    def __init__(self, targetparticle1, targetparticle2, k, restlength):
-        self.target1=targetparticle1
-        self.target2=targetparticle2
+    def __init__(self, targetParticle1, targetParticle2, k, restLength):
+        self.target1=targetParticle1
+        self.target2=targetParticle2
         self.k=k
-        self.l=restlength
+        self.l=restLength
 
-    def AddOwnForce(self):
+    def addOwnForce(self):
         displacement=self.target1.r-self.target2.r
         force=self.k*(magnitude(displacement)-self.l)*displacement/magnitude(displacement)
         #print("spring force", force)
@@ -64,26 +64,26 @@ class SprungSlot(Force):
 class Constraint:
     def affects(self, particle):
         pass
-    def correctingaccelerationneeded(self):
+    def correctingAccelerationNeeded(self):
         pass
-    def AddOwnForce(self, strength):
+    def addOwnForce(self, strength):
         pass
-    def calculateeffect(self, other):
+    def calculateEffect(self, other):
         pass
     def draw(self, surface, transform, thickness=1):
         pass
     
 
 class Rod(Constraint):
-    def __init__(self, targetparticle1, targetparticle2, length):
-        self.target1=targetparticle1
-        self.target2=targetparticle2
+    def __init__(self, targetParticle1, targetParticle2, length):
+        self.target1=targetParticle1
+        self.target2=targetParticle2
         self.length=length
-        self.target1.Constraints.append(self)
-        self.target2.Constraints.append(self)
+        self.target1.constraints.append(self)
+        self.target2.constraints.append(self)
 
     def affects(self, particle):
-        #returns a value in units of 1/mass
+        #returns a vector with units of 1/mass
         if particle == self.target1:
             return -self.direction()/self.target1.m
         elif particle == self.target2:
@@ -93,18 +93,18 @@ class Rod(Constraint):
             return np.matrix(np.zeros([2,1]))
         
             
-    def currentvalue(self):
+    def currentValue(self):
         #returns a length vector
         #print "current value", magnitude(self.target1.r-self.target2.r)
         return magnitude(self.target1.r-self.target2.r)
 
-    def dydtvalue(self):
-        return magnitude((self.target1.v-self.target2.v).getT()*((self.target1.r-self.target2.r)/self.currentvalue))
+    def dydtValue(self):
+        return magnitude((self.target1.v-self.target2.v).getT()*((self.target1.r-self.target2.r)/self.currentValue))
 
     def direction(self):
         #returns a unit vector
         #print (self.target1.r-self.target2.r)/self.currentvalue()
-        return (self.target1.r-self.target2.r)/self.currentvalue()
+        return (self.target1.r-self.target2.r)/self.currentValue()
 
     def angle(self):
         dir=self.direction()
@@ -112,28 +112,26 @@ class Rod(Constraint):
         y=dir.item(1)
         return np.arctan2(x,y)
     
-    def correctingaccelerationneeded(self):
+    def correctingAccelerationNeeded(self):
         #returns an acceleration magnitude
         
 
 
-        centripetalacceleration=(((magnitude((self.target1.v -self.target2.v).getT()*
-                                             (np.matrix([[0.0,-1.0],[1.0,0.0]])*self.direction())))**2)/self.currentvalue())
+        centripetalAcceleration=(((magnitude((self.target1.v -self.target2.v).getT()*
+                                             (np.matrix([[0.0,-1.0],[1.0,0.0]])*self.direction())))**2)/self.currentValue())
         
 
-        netaccelerationofparticles=(self.target1.f.getT()*self.direction()/self.target1.m-self.target2.f.getT()*
+        netAccelerationOfParticles=(self.target1.f.getT()*self.direction()/self.target1.m-self.target2.f.getT()*
                                     self.direction()/self.target2.m)
 
-        #print "centripetl acc", centripetalacceleration
-        #print "net acc particles", netaccelerationofparticles.item(0)
         
-        return centripetalacceleration+netaccelerationofparticles.item(0)
+        return centripetalAcceleration+netAccelerationOfParticles.item(0)
     
-    def AddOwnForce(self, strength):
+    def addOwnForce(self, strength):
         self.target1.f=self.target1.f-strength*self.direction()
         self.target2.f=self.target2.f+strength*self.direction()
 
-    def calculateeffect(self, other):
+    def calculateEffect(self, other):
         #print "calculated effect", (-self.direction().getT())*other.affects(self.target1)+(self.direction().getT())*other.affects(self.target2)
         return(-self.direction().getT())*other.affects(self.target1)+(self.direction().getT())*other.affects(self.target2)
 
@@ -143,25 +141,25 @@ class Rod(Constraint):
 
         
 class SliderOnBackground(Constraint):
-    def __init__(self, targetparticle, normalvector, distance):
-        self.target=targetparticle
-        self.normal=normalvector
+    def __init__(self, targetParticle, normalVector, distance):
+        self.target=targetParticle
+        self.normal=normalVector
         self.distance=distance
-        self.target.Constraints.append(self)
+        self.target.constraints.append(self)
        
     def affects(self,particle):
         if particle == self.target:
             return self.normal/self.target.m
         else:
             return np.matrix([[0.0],[0.0]])
-    def correctingaccelerationneeded(self):
+    def correctingAccelerationNeeded(self):
         return -(self.normal.getT()*self.target.f).item(0)/self.target.m
 
-    def AddOwnForce(self, strength):
+    def addOwnForce(self, strength):
         #print "strength" ,strength
         self.target.f = self.target.f + strength*self.normal
 
-    def calculateeffect(self, other):
+    def calculateEffect(self, other):
         #print "calculatedeffect",(self.normal.getT()*other.affects(self.target)).item(0)
         return (self.normal.getT()*other.affects(self.target)).item(0)
     def draw(self, surface, transform, color=(0,0,255), thickness=4):
@@ -171,16 +169,16 @@ class SliderOnBackground(Constraint):
             
 class ParticleSystem:
     def __init__(self):
-        self.particlelist=[]
-        self.NonConstraintForces=[]
-        self.ConstraintForces=[]
-        self.numcalls=0
+        self.particleList=[]
+        self.nonConstraintForces=[]
+        self.constraintForces=[]
+        self.numCalls=0
         
     #Setup methods
 
 
-    def AddParticle(self, mass, x, y, vx, vy, color=(0,255,0)):
-        self.particlelist.append(Particle(mass,
+    def addParticle(self, mass, x, y, vx, vy, color=(0,255,0)):
+        self.particleList.append(Particle(mass,
                                           np.matrix([[x],
                                                      [y]]),
                                           np.matrix([[vx],
@@ -191,14 +189,14 @@ class ParticleSystem:
 
 
 
-    def AddGravity(self, n, forcevector):
-        self.NonConstraintForces.append(Gravity(self.particlelist[n], forcevector))
+    def addGravity(self, n, forcevector):
+        self.nonConstraintForces.append(Gravity(self.particlelist[n], forcevector))
 
-    def AddSpring(self, n1, n2, k, restlength):
-        self.NonConstraintForces.append(Spring(self.particlelist[n1], self.particlelist[n2], k, restlength))    
+    def addSpring(self, n1, n2, k, restLength):
+        self.nonConstraintForces.append(Spring(self.particleList[n1], self.particleList[n2], k, restLength))    
 
 
-    def AddRod(self, n1, n2, length):
+    def addRod(self, n1, n2, length):
         newrod=Rod(self.particlelist[n1], self.particlelist[n2], length)
         self.ConstraintForces.append(newrod)
         newrod.ind=len(self.ConstraintForces)        
