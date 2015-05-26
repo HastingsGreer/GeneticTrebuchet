@@ -25,7 +25,7 @@ class Slider(Constraint):
         self.theta = theta
     def addToSystem(self, n, particles, system):
         normal=np.matrix([[np.sin(self.theta)],[np.cos(self.theta)]])                             #this is pretty much self evident, yes?
-        system.AddSlider(particles[n], normal, 0)
+        system.addSlider(particles[n], normal, 0)
     def __repr__(self):
         return "Slider(" + repr(self.theta) + ")"
         
@@ -36,7 +36,7 @@ class Rod(Constraint):
         self.disp = disp
     def addToSystem(self, n, particles, system):
         if n + self.disp < len(particles) - 1:
-            system.AddRod(particles[n], particles[n+self.disp], 0)
+            system.addRod(particles[n], particles[n+self.disp], 0)
     def __repr__(self):
         return "Rod(" + repr(self.disp) + ")"
 class Pin(Constraint):
@@ -45,8 +45,8 @@ class Pin(Constraint):
         self.n1 = np.matrix([[a], [a]])
         self.n2 = np.matrix([[a], [-a]])
     def addToSystem(self, n, particles, system):
-        system.AddSlider(particles[n], self.n1, 0)
-        system.AddSlider(particles[n], self.n2, 0)
+        system.addSlider(particles[n], self.n1, 0)
+        system.addSlider(particles[n], self.n2, 0)
     def __repr__(self):
         return "Pin()"
 def newConstraint():
@@ -126,19 +126,19 @@ class LinkTrebuchet:
         angle = 0.0
         particles = []
         for link in self.tLinkList:
-            particles = particles + [system.AddParticle(1000 if (len(particles)==0) else 10, position[0], position[1], 0, 0, color = (255, 0, 0))]
+            particles = particles + [system.addParticle(1000 if (len(particles)==0) else 10, position[0], position[1], 0, 0, color = (255, 0, 0))]
             angle = angle + link.angle
             position = position + link.length*np.array([np.cos(angle),np.sin(angle)])
                                                                
-        particles = particles + [system.AddParticle(1, position[0], position[1], 0, 0, color = (255, 255, 0))]
+        particles = particles + [system.addParticle(1, position[0], position[1], 0, 0, color = (255, 255, 0))]
         
         for particle in particles:
-            system.AddGravity(particle, np.matrix([[0.0],
+            system.addGravity(particle, np.matrix([[0.0],
                                               [-9.8]]))
         
         
         for pair in zip(particles[1:], particles[:-1]):
-            system.AddRod(pair[0], pair[1], 42)
+            system.addRod(pair[0], pair[1], 42)
             pass
             
         for link , n in zip(self.tLinkList, range(len(self.tLinkList))):
@@ -152,11 +152,14 @@ class LinkTrebuchet:
 
         vx=[np.abs(step[-2])*step[-1] for step in animation.solution]                #ranges
         
+        
+        #Suppress individuals that spin around too much:
+        
         angles = np.unwrap(np.arctan2(animation.solution[:, -4] - animation.solution[:, -8],
                                       animation.solution[:, -3] - animation.solution[:, -7]))
         for n in xrange(len(animation.solution)):
             if abs(angles[n]) > 3 * np.pi:
-                for k in xrange(n, len(animation.solution)):
+                for k in xrange(n, len(animation.solution)):        
                     vx[k] = 0 
     
 
