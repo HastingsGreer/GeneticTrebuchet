@@ -198,8 +198,8 @@ class ParticleSystem:
 
     def addRod(self, n1, n2, length):
         newrod=Rod(self.particlelist[n1], self.particlelist[n2], length)
-        self.ConstraintForces.append(newrod)
-        newrod.ind=len(self.ConstraintForces)        
+        self.constraintForces.append(newrod)
+        newrod.ind=len(self.constraintForces)        
 
     def AddSlider(self, n, normalvector, distance):
         newslider=SliderOnBackground(self.particlelist[n], normalvector, distance)
