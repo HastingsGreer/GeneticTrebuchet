@@ -28,7 +28,7 @@ class Particle:
 
 class Force:
     def addOwnForce(self):
-        print "you forgot to redefine AddOwnForce"
+        print "you forgot to redefine addOwnForce"
 
 
 class Gravity(Force):
@@ -184,36 +184,36 @@ class ParticleSystem:
                                           np.matrix([[vx],
                                                      [vy]]), color=color))
                          
-        return len(self.particlelist)-1
+        return len(self.particleList)-1
 
 
 
 
     def addGravity(self, n, forcevector):
-        self.nonConstraintForces.append(Gravity(self.particlelist[n], forcevector))
+        self.nonConstraintForces.append(Gravity(self.particleList[n], forcevector))
 
     def addSpring(self, n1, n2, k, restLength):
         self.nonConstraintForces.append(Spring(self.particleList[n1], self.particleList[n2], k, restLength))    
 
 
     def addRod(self, n1, n2, length):
-        newrod=Rod(self.particlelist[n1], self.particlelist[n2], length)
+        newrod=Rod(self.particleList[n1], self.particleList[n2], length)
         self.constraintForces.append(newrod)
         newrod.ind=len(self.constraintForces)        
 
-    def AddSlider(self, n, normalvector, distance):
-        newslider=SliderOnBackground(self.particlelist[n], normalvector, distance)
-        self.ConstraintForces.append(newslider)
-        newslider.ind=len(self.ConstraintForces)      
+    def addSlider(self, n, normalvector, distance):
+        newslider=SliderOnBackground(self.particleList[n], normalvector, distance)
+        self.constraintForces.append(newslider)
+        newslider.ind=len(self.constraintForces)      
 
-    def AddPin(self, n):
-        self.AddSlider(n, np.matrix([[1],[0]]), 0)
-        self.AddSlider(n, np.matrix([[0],[1]]), 0)
+    def addPin(self, n):
+        self.addSlider(n, np.matrix([[1.],[0.]]), 0)
+        self.addSlider(n, np.matrix([[0.],[1]]), 0)
         
 
-    def FillStateVector(self):
+    def fillStateVector(self):
         y=[]
-        for P in self.particlelist:
+        for P in self.particleList:
             y.append(P.r.item(0))
             y.append(P.r.item(1))
             y.append(P.v.item(0))
@@ -227,12 +227,12 @@ class ParticleSystem:
 
 
 
-    def endcondition(self,y):
+    def endCondition(self,y):
         return False
 
-    def FillFromStateVector(self, y):
-        i=0
-        for P in self.particlelist:
+    def fillFromStateVector(self, y):
+        i = 0
+        for P in self.particleList:
 
             P.r=np.matrix([[y.item(i)  ],
                            [y.item(i+1)]])
@@ -247,76 +247,75 @@ class ParticleSystem:
     
             
     
-    def CalculateNonConstraintForces(self):
-        for EachForce in self.NonConstraintForces:
-            EachForce.AddOwnForce()
+    def calculateNonConstraintForces(self):
+        for eachForce in self.nonConstraintForces:
+            eachForce.addOwnForce()
     
-    def CalculateConstraintForces(self, damn_update=True):
-        Correctingaccelerationsneeded=[]
-        for C in self.ConstraintForces:
-            Correctingaccelerationsneeded.append(C.correctingaccelerationneeded())
+    def calculateConstraintForces(self, damn_update=True):
+        correctingAccelerationsNeeded=[]
+        for c in self.constraintForces:
+            correctingAccelerationsNeeded.append(c.correctingAccelerationNeeded())
 
-        D=np.matrix(Correctingaccelerationsneeded).getT()
+        D=np.matrix(correctingAccelerationsNeeded).getT()
         
-        numconstraints=len(self.ConstraintForces)
-        A=np.matrix(np.zeros([numconstraints, numconstraints]))
+        numConstraints=len(self.constraintForces)
+        A=np.matrix(np.zeros([numConstraints, numConstraints]))
         
 
-        for i in range(numconstraints):
-            for j in range(numconstraints):
-                A[i,j]=self.ConstraintForces[j].calculateeffect(self.ConstraintForces[i])
-        #print "D",D
+        for i in range(numConstraints):
+            for j in range(numConstraints):
+                A[i,j]=self.constraintForces[j].calculateEffect(self.constraintForces[i])
         
-        #print "A",A
         
         try:
-            Magnitudes = (A**(-1))*D
+            magnitudes = (A**(-1))*D
         except:
-            self.numcalls=100000000009
+            self.numCalls=1000000000
         
-	    #print "Magnitudes, ", Magnitudes:
+	    #print "magnitudes, ", magnitudes:
 
 
         if damn_update:
-            for i in range(numconstraints):
-                self.ConstraintForces[i].AddOwnForce(Magnitudes.item(i))
+            for i in range(numConstraints):
+                self.constraintForces[i].addOwnForce(magnitudes.item(i))
 
     def checkLegality(self):
-        Correctingaccelerationsneeded=[]
-        for C in self.ConstraintForces:
-            Correctingaccelerationsneeded.append(C.correctingaccelerationneeded())
+        correctingAccelerationsNeeded=[]
+        for c in self.constraintForces:
+            correctingAccelerationsNeeded.append(c.correctingAccelerationNeeded())
 
-        D=np.matrix(Correctingaccelerationsneeded).getT()
+        D=np.matrix(correctingAccelerationsNeeded).getT()
         
-        numconstraints=len(self.ConstraintForces)
-        A=np.matrix(np.zeros([numconstraints, numconstraints]))
+        numConstraints=len(self.constraintForces)
+        A=np.matrix(np.zeros([numConstraints, numConstraints]))
+        
 
-        for i in range(numconstraints):
-            for j in range(numconstraints):
-                A[i,j]=self.ConstraintForces[j].calculateeffect(self.ConstraintForces[i])
+        for i in range(numConstraints):
+            for j in range(numConstraints):
+                A[i,j]=self.constraintForces[j].calculateEffect(self.constraintForces[i])
         
-        Magnitudes = (A**(-1))*D
+        magnitudes = (A**(-1))*D
         
                 
     
                
 
     def dydt(self, y, t):
-        self.numcalls=self.numcalls+1
-        if self.numcalls>=100000:
+        self.numCalls = self.numCalls + 1
+        if self.numCalls >= 100000:
             return np.zeros(len(y))
 
-        if self.endcondition(y)==True:
+        if self.endCondition(y)==True:
             return np.zeros(len(y))
         
 	
-        self.FillFromStateVector(y)
-        self.CalculateNonConstraintForces()
-        self.CalculateConstraintForces()
+        self.fillFromStateVector(y)
+        self.calculateNonConstraintForces()
+        self.calculateConstraintForces()
 
         derivatives=[]
 
-        for P in self.particlelist:
+        for P in self.particleList:
             derivatives.append(P.v.item(0))
             derivatives.append(P.v.item(1))
             derivatives.append(P.f.item(0)/P.m)
@@ -324,15 +323,15 @@ class ParticleSystem:
             
         return np.array(derivatives)
         
-    def Simulate(self, tfinal=3.0, steps=1000):
-        self.y0=MySystem.FillStateVector()
+    def simulate(self, tfinal=3.0, steps=1000):
+        self.y0=self.fillStateVector()
         self.time = np.linspace(0.0, tfinal, steps)
         self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time)
 
-	print "numcalls" ,self.numcalls
+        print "numcalls" ,self.numcalls
         self.xs=[]
         self.ys=[]
-        for point in MySystem.solution:
+        for point in self.solution:
             pointxs=[]
             pointys=[]
             for j in range(len(point)/4):
@@ -363,7 +362,7 @@ class Animation():
             for constraint in self.system.ConstraintForces:
                 constraint.draw(self.DISPLAYSURF, self.transform, thickness=1)
 
-            for particle in self.system.particlelist:
+            for particle in self.system.particleList:
                 particle.draw(self.DISPLAYSURF, self.transform, thickness=1)
             
             pygame.display.update()
@@ -372,10 +371,10 @@ class Animation():
     
 
     def simanimate(self, tfinal=3.0, steps=1000):
-        self.y0=self.system.FillStateVector()
+        self.y0=self.system.fillStateVector()
         self.time = np.linspace(0.0, tfinal, steps)
         self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time, rtol=1e-3, atol=1e-3, mxstep=40)
-        print "numcalls:", self.system.numcalls
+        print "numCalls:", self.system.numCalls
         
         self.xs=[]
         self.ys=[]
@@ -394,10 +393,10 @@ class Animation():
 
         self.DISPLAYSURF.fill(self.WHITE)
 
-        for constraint in self.system.ConstraintForces:
+        for constraint in self.system.constraintForces:
             constraint.draw(self.DISPLAYSURF, self.transform, thickness=1)
 
-        for particle in self.system.particlelist:
+        for particle in self.system.particleList:
             particle.draw(self.DISPLAYSURF, self.transform, thickness=1)
         
         pygame.display.update()
@@ -405,13 +404,13 @@ class Animation():
 
     def animate(self, pathpoints):
         for point in pathpoints:
-            self.system.FillFromStateVector(point)
+            self.system.fillFromStateVector(point)
             self.DISPLAYSURF.fill(self.WHITE)
 
-            for constraint in self.system.ConstraintForces:
+            for constraint in self.system.constraintForces:
                 constraint.draw(self.DISPLAYSURF, self.transform, thickness=1)
 
-            for particle in self.system.particlelist:
+            for particle in self.system.particleList:
                 particle.draw(self.DISPLAYSURF, self.transform, thickness=1)
             
             pygame.display.update()
@@ -422,27 +421,27 @@ class Animation():
 
 def  TwoPendulums():
     MySystem=ParticleSystem()
-    Particle0=MySystem.AddParticle(1.0, 0.0, 0.0, 0.0, 0.0)
-    Particle1=MySystem.AddParticle(1.0, 1.0, 0.0, 0.0, 0.0)
-    Particle2=MySystem.AddParticle(10000.0, 2.0, 0.0, 0.0, 0.0)
-    Anchor=MySystem.AddParticle(10000.0, -1.0, 0.0, 0.0, 0.0)
+    Particle0=MySystem.addParticle(1.0, 0.0, 0.0, 0.0, 0.0)
+    Particle1=MySystem.addParticle(1.0, 1.0, 0.0, 0.0, 0.0)
+    Particle2=MySystem.addParticle(10000.0, 2.0, 0.0, 0.0, 0.0)
+    Anchor=MySystem.addParticle(10000.0, -1.0, 0.0, 0.0, 0.0)
 
-    MySystem.AddGravity(Particle0, np.matrix([[0.0],
+    MySystem.addGravity(Particle0, np.matrix([[0.0],
                                               [-9.8]]))
 
-    MySystem.AddGravity(Particle1, np.matrix([[0.0],
+    MySystem.addGravity(Particle1, np.matrix([[0.0],
                                               [-9.8]]))
 
-    MySystem.AddSpring(Particle0, Particle1, 1.0, 1.0)
-    #MySystem.AddSpring(Particle0, Anchor, 1500.0, 1.0)
+    MySystem.addSpring(Particle0, Particle1, 1.0, 1.0)
+    #MySystem.addSpring(Particle0, Anchor, 1500.0, 1.0)
 
-    MySystem.AddRod(Particle0, Anchor, 1)
-    MySystem.AddRod(Particle2, Particle1, 1)
+    MySystem.addRod(Particle0, Anchor, 1)
+    MySystem.addRod(Particle2, Particle1, 1)
     #debug:
     #y=np.matrix([[0],[0],[0],[0],[2],[0],[0],[0]])
     #MySystem.FillFromStateVector(y)
     #MySystem.CalculateNonConstraintForces()
-    #for P in MySystem.particlelist:
+    #for P in MySystem.particleList:
     #    print P.f
     y0=MySystem.FillStateVector()
     return MySystem
@@ -450,9 +449,9 @@ def  TwoPendulums():
 
 def SpinningRod():
     MySystem=ParticleSystem()
-    Particle0=MySystem.AddParticle(2.0, 0.0, 0.0, 0.0, 1.0)
-    Particle1=MySystem.AddParticle(3.0, 1.0, 0.0, 0.0, -1.0)
-    MySystem.AddRod(Particle0, Particle1, 1)
+    Particle0=MySystem.addParticle(2.0, 0.0, 0.0, 0.0, 1.0)
+    Particle1=MySystem.addParticle(3.0, 1.0, 0.0, 0.0, -1.0)
+    MySystem.addRod(Particle0, Particle1, 1)
     
     return MySystem
 
@@ -460,31 +459,31 @@ def SpinningRod():
 
 def SpringAndRodAligned():
     MySystem=ParticleSystem()
-    Particle0=MySystem.AddParticle(2.0, 0.0, 0.0, 0.0, 0.0)
-    Particle1=MySystem.AddParticle(2.0, 1.0, 0.0, 0.0, 0.0)
-    Particle2=MySystem.AddParticle(1.0, -1.0, 0.0, 0.0, 0.0)
-    MySystem.AddSpring(Particle0, Particle2, 5, 2)
-    MySystem.AddRod(Particle0, Particle1, 1)
+    Particle0=MySystem.addParticle(2.0, 0.0, 0.0, 0.0, 0.0)
+    Particle1=MySystem.addParticle(2.0, 1.0, 0.0, 0.0, 0.0)
+    Particle2=MySystem.addParticle(1.0, -1.0, 0.0, 0.0, 0.0)
+    MySystem.addSpring(Particle0, Particle2, 5, 2)
+    MySystem.addRod(Particle0, Particle1, 1)
     return MySystem
 
 
 def SliderWithNoMotion():
     MySystem=ParticleSystem()
-    Particle0=MySystem.AddParticle(3.0, 0.0, 0.0, 0.0, 0.0)
-    MySystem.AddSlider(Particle0, np.matrix([[0.0],[1.0]]), 0)
-    MySystem.AddSlider(Particle0, np.matrix([[1.0], [0.0]]), 0)
-    MySystem.AddGravity(Particle0, np.matrix([[0.0],
+    Particle0=MySystem.addParticle(3.0, 0.0, 0.0, 0.0, 0.0)
+    MySystem.addSlider(Particle0, np.matrix([[0.0],[1.0]]), 0)
+    MySystem.addSlider(Particle0, np.matrix([[1.0], [0.0]]), 0)
+    MySystem.addGravity(Particle0, np.matrix([[0.0],
                                               [-9.8]]))
     return MySystem 
 
 def SpringAndFixedPoint():
     MySystem=ParticleSystem()
-    Particle0=MySystem.AddParticle(3.0, 0.0, 0.0, 0.0, 0.0)
-    Particle1=MySystem.AddParticle(2.0, 1.0, 0.0, 0.0, 0.0)
-    MySystem.AddSpring(Particle0, Particle1, 9.8, 1.0) 
-    MySystem.AddSlider(Particle0, np.matrix([[0.0],[1.0]]), 0)
-    MySystem.AddSlider(Particle0, np.matrix([[3.0/5.0], [4.0/5.0]]), 0)
-    MySystem.AddGravity(Particle1, np.matrix([[0.0],
+    Particle0=MySystem.addParticle(3.0, 0.0, 0.0, 0.0, 0.0)
+    Particle1=MySystem.addParticle(2.0, 1.0, 0.0, 0.0, 0.0)
+    MySystem.addSpring(Particle0, Particle1, 9.8, 1.0) 
+    MySystem.addSlider(Particle0, np.matrix([[0.0],[1.0]]), 0)
+    MySystem.addSlider(Particle0, np.matrix([[3.0/5.0], [4.0/5.0]]), 0)
+    MySystem.addGravity(Particle1, np.matrix([[0.0],
                                               [-9.8]]))
     return MySystem 
 
@@ -492,51 +491,53 @@ def SpringAndFixedPoint():
 def DoublePendulum():
     MySystem=ParticleSystem()
 
-    Anchor=MySystem.AddParticle(1.0, 0.0, 0.0, 0.0, 0.0)
-    Particle1=MySystem.AddParticle(1.0, 2.0, 0.0, 0.0, 0.0)
-    Particle2=MySystem.AddParticle(1.0, 3.0, 0.0, 0.0, 0.0)
+    Anchor=MySystem.addParticle(1.0, 0.0, 0.0, 0.0, 0.0)
+    Particle1=MySystem.addParticle(1.0, 2.0, 0.0, 0.0, 0.0)
+    Particle2=MySystem.addParticle(1.0, 3.0, 1.0, 0.0, 0.0)
 
-    MySystem.AddGravity(Particle1, np.matrix([[0.0],
+    MySystem.addGravity(Particle1, np.matrix([[0.0],
                                               [-9.8]]))
-    MySystem.AddGravity(Particle2, np.matrix([[0.0],
+    MySystem.addGravity(Particle2, np.matrix([[0.0],
                                               [-9.8]]))
 
     
-    MySystem.AddSlider(Anchor, np.matrix([[0.0],[1.0]]), 0)
-    MySystem.AddSlider(Anchor, np.matrix([[1.0], [0.0]]), 0)
-    MySystem.AddRod(Anchor,Particle1, 2.0)
-    MySystem.AddRod(Particle1,Particle2, 1.0)
+    #MySystem.addSlider(Anchor, np.matrix([[0.0],[1.0]]), 0)
+    #MySystem.addSlider(Anchor, np.matrix([[1.0], [0.0]]), 0)
+    MySystem.addPin(Anchor)
+    MySystem.addRod(Anchor,Particle1, 2.0)
+    MySystem.addRod(Particle1,Particle2, 1.0)
+    MySystem.addRod(Anchor, Particle2, 1.0)
     
     
     return MySystem
 
 def Trebuchet():
     MySystem=ParticleSystem()
-    MainAxle=MySystem.AddParticle(10, 0.0 , 0.0, 0.0, 0.0)
-    CounterweightAxle=MySystem.AddParticle(10, -1.0, 1.0, 0.0, 0.0)
-    ArmTip=MySystem.AddParticle(10, 4.0, -3.0, 0.0, 0.0)
-    Counterweight=MySystem.AddParticle(100.0, -1.0, -1.5, 0.0, 0.0)
-    Projectile=MySystem.AddParticle(1, 0.0, -3.0, 0.0, 0.0)
+    MainAxle=MySystem.addParticle(10, 0.0 , 0.0, 0.0, 0.0)
+    CounterweightAxle=MySystem.addParticle(10, -1.0, 1.0, 0.0, 0.0)
+    ArmTip=MySystem.addParticle(10, 4.0, -3.0, 0.0, 0.0)
+    Counterweight=MySystem.addParticle(100.0, -1.0, -1.5, 0.0, 0.0)
+    Projectile=MySystem.addParticle(1, 0.0, -3.0, 0.0, 0.0)
     
-    MySystem.AddGravity(MainAxle, np.matrix([[0.0],
+    MySystem.addGravity(MainAxle, np.matrix([[0.0],
                                              [-9.8]]))
-    MySystem.AddGravity(ArmTip, np.matrix([[0.0],
+    MySystem.addGravity(ArmTip, np.matrix([[0.0],
                                            [-9.8]]))
-    MySystem.AddGravity(Counterweight, np.matrix([[0.0],
+    MySystem.addGravity(Counterweight, np.matrix([[0.0],
                                                   [-9.8]]))
-    MySystem.AddGravity(CounterweightAxle, np.matrix([[0.0],
+    MySystem.addGravity(CounterweightAxle, np.matrix([[0.0],
                                                       [-9.8]]))
-    MySystem.AddGravity(Projectile, np.matrix([[0.0],
+    MySystem.addGravity(Projectile, np.matrix([[0.0],
                                                [-9.8]]))
     
 
 
-    MySystem.AddPin(MainAxle)
-    MySystem.AddRod(MainAxle, ArmTip, 1.0)
-    MySystem.AddRod(MainAxle, CounterweightAxle, 1.0)
-    MySystem.AddRod(ArmTip, CounterweightAxle, 1.0)
-    MySystem.AddRod(ArmTip, Projectile, 1.0)
-    MySystem.AddRod(CounterweightAxle, Counterweight, 1.0)
+    MySystem.addPin(MainAxle)
+    MySystem.addRod(MainAxle, ArmTip, 1.0)
+    MySystem.addRod(MainAxle, CounterweightAxle, 1.0)
+    MySystem.addRod(ArmTip, CounterweightAxle, 1.0)
+    MySystem.addRod(ArmTip, Projectile, 1.0)
+    MySystem.addRod(CounterweightAxle, Counterweight, 1.0)
 
     return MySystem
 
