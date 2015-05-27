@@ -2,10 +2,16 @@ import numpy as np
 from numpy import pi
 import random
 import calculatemotion
-import animation
+
 import sys
-import pygame
-from pygame.locals import *
+doAnimation = True
+try:
+    import animation
+    import pygame
+    from pygame.locals import *
+    DISPLAYSURF=pygame.display.set_mode((300,400))
+except:
+    doAnimation = False
 
 
 SLIDER = 0
@@ -88,7 +94,6 @@ class TrebLink:
                
 
 trebuchetarchive=dict()
-DISPLAYSURF=pygame.display.set_mode((300,400))
 
 
 class LinkTrebuchet:
@@ -145,9 +150,12 @@ class LinkTrebuchet:
         for link , n in zip(self.tLinkList, range(len(self.tLinkList))):
             link.addConstraints(n, particles, system)
         
-        
-        myAnimation = animation.Animation(system, DISPLAYSURF)
-        myAnimation.simanimate()
+        if doAnimation:
+            myAnimation = animation.Animation(system, DISPLAYSURF)
+            myAnimation.simanimate()
+        else:
+            system.simulate()
+            myAnimation = system()
         miny=max(np.array(myAnimation.ys)[0])-min((np.array(myAnimation.ys)).flatten())                            #total height
 
 
