@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import pi
 import random
-import calculatemotionanimated
+import calculatemotion
+import animation
 import sys
 import pygame
 from pygame.locals import *
@@ -113,7 +114,7 @@ class LinkTrebuchet:
                 LinkTrebuchet((self.tLinkList[:n] + other.tLinkList[m:])[:10]),
                 LinkTrebuchet((other.tLinkList[m:] + self.tLinkList[:n])[:10]),
                 ]
-    def evaluate(self, savesystem = False):
+    def evaluate(self, savesystem = False, surface = None):
         
         
         if (str(self) in trebuchetarchive) and not savesystem:              #checks if has been tried before, uses previous result if so.
@@ -121,7 +122,7 @@ class LinkTrebuchet:
             return trebuchetarchive[str(self)]
         
         
-        system=calculatemotionanimated.ParticleSystem()
+        system=calculatemotion.ParticleSystem()
         position = np.array([0.0, 0.0])
         angle = 0.0
         particles = []
@@ -145,21 +146,21 @@ class LinkTrebuchet:
             link.addConstraints(n, particles, system)
         
         
-        animation = calculatemotionanimated.Animation(system, DISPLAYSURF)
-        animation.simanimate()
-        miny=max(np.array(animation.ys)[0])-min((np.array(animation.ys)).flatten())                            #total height
+        myAnimation = animation.Animation(system, DISPLAYSURF)
+        myAnimation.simanimate()
+        miny=max(np.array(myAnimation.ys)[0])-min((np.array(myAnimation.ys)).flatten())                            #total height
 
 
-        vx=[np.abs(step[-2])*step[-1] for step in animation.solution]                #ranges
+        vx=[np.abs(step[-2])*step[-1] for step in myAnimation.solution]                #ranges
         
         
         #Suppress individuals that spin around too much:
         
-        angles = np.unwrap(np.arctan2(animation.solution[:, -4] - animation.solution[:, -8],
-                                      animation.solution[:, -3] - animation.solution[:, -7]))
-        for n in xrange(len(animation.solution)):
+        angles = np.unwrap(np.arctan2(myAnimation.solution[:, -4] - myAnimation.solution[:, -8],
+                                      myAnimation.solution[:, -3] - myAnimation.solution[:, -7]))
+        for n in xrange(len(myAnimation.solution)):
             if abs(angles[n]) > 3 * np.pi:
-                for k in xrange(n, len(animation.solution)):        
+                for k in xrange(n, len(myAnimation.solution)):        
                     vx[k] = 0 
     
 
@@ -172,7 +173,7 @@ class LinkTrebuchet:
         print "efficiency:", maxxy/(9.8*1000*miny)
     
         if savesystem==True:
-            return animation
+            return myAnimation
         trebuchetarchive[str(self)]=maxxy/(9.8*1000*miny)
         
     
