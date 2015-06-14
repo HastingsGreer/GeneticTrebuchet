@@ -3,6 +3,8 @@ from numpy import pi
 import random
 import calculatemotion
 
+import types #this is always a good sign :D (this is used to redefine 
+
 import sys
 doAnimation = True
 try:
@@ -144,11 +146,18 @@ class LinkTrebuchet:
         
         
         for pair in zip(particles[1:], particles[:-1]):
-            system.addRod(pair[0], pair[1], 42)
-            pass
-            
+            sling = system.addRod(pair[0], pair[1], 42)    #I want sling to be the last of this set of rods
+        
+        
+        
+        
+        
         for link , n in zip(self.tLinkList, range(len(self.tLinkList))):
             link.addConstraints(n, particles, system)
+        
+        def endCondition(sys, y):
+            return (sys.constraintForces[sling]).strength < -5
+        system.endCondition = endCondition
         
         if doAnimation:
             myAnimation = animation.Animation(system, DISPLAYSURF)
