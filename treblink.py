@@ -155,7 +155,7 @@ class LinkTrebuchet:
             myAnimation.simanimate()
         else:
             system.simulate()
-            myAnimation = system()
+            myAnimation = system
         miny=max(np.array(myAnimation.ys)[0])-min((np.array(myAnimation.ys)).flatten())                            #total height
 
 
