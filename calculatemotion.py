@@ -286,7 +286,7 @@ class ParticleSystem:
         self.time = np.linspace(0.0, tfinal, steps)
         self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time)
 
-        print "numcalls" ,self.numcalls
+        print "numcalls" ,self.numCalls
         self.xs=[]
         self.ys=[]
         for point in self.solution:
