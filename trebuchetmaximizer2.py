@@ -18,7 +18,7 @@ class TrebMax(genetic.Individual):
         print self.chromosome
         self.score = self.chromosome.evaluate()
         if self.score > .0001:
-            f.write("\n" + self.chromosome + '\n' + str(self.score)
+            f.write("\n" + self.chromosome + '\n' + str(self.score))
                      
     def mutate(self, gene):
         self.chromosome = self.chromosome.mutate()
