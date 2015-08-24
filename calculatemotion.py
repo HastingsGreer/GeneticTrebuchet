@@ -284,7 +284,7 @@ class ParticleSystem:
     def simulate(self, tfinal=3.0, steps=1000):
         self.y0=self.fillStateVector()
         self.time = np.linspace(0.0, tfinal, steps)
-        self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time)
+        self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time, rtol =1e-3, atol=1e-3, mxstep=40)
 
         print "numcalls" ,self.numCalls
         self.xs=[]
