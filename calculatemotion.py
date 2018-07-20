@@ -62,6 +62,9 @@ class Constraint:
     def calculateEffect(self, other):
         pass
 
+    def isActive(self, t):
+        return True
+
 class Rod(Constraint):
     def __init__(self, targetParticle1, targetParticle2, length):
         self.target1=targetParticle1
@@ -110,7 +113,7 @@ class Rod(Constraint):
         
         return centripetalAcceleration+netAccelerationOfParticles.item(0)
     
-    def addOwnForce(self, strength):
+    def addOwnForce(self, strength, t):
         self.strength = strength
         self.target1.f=self.target1.f-strength*self.direction()
         self.target2.f=self.target2.f+strength*self.direction()
@@ -119,7 +122,56 @@ class Rod(Constraint):
         #print "calculated effect", (-self.direction().getT())*other.affects(self.target1)+(self.direction().getT())*other.affects(self.target2)
         return(-self.direction().getT())*other.affects(self.target1)+(self.direction().getT())*other.affects(self.target2)
 
-        
+class Sling(Rod):
+    def __init__(self, targetParticle1, targetParticle2, length):
+        super().__init__(targetParticle1, targetParticle2, length)
+
+        self.tfinal = 1e20
+        self.t_latest_seen = 0
+        self.broken=False
+        self.best_range = -1
+
+    def isActive(self, t):
+
+        in_firing_position = self.target1.r[1] > self.target2.r[1]
+
+        self.t_latest_seen = max(t, self.t_latest_seen)
+        if self.t_latest_seen == t and in_firing_position and not(self.broken):
+            projRange = max(0, 2 * abs(self.target1.v[0]) * self.target1.v[1] / 9.8)
+
+            #print(t, projRange)
+            #time.sleep(.5)
+            
+
+            
+
+            if projRange > self.best_range:
+                self.best_range = projRange
+            elif projRange < self.best_range - 4:
+                if self.best_range > 30:
+                    self.tfinal = t
+                    self.broken = True
+
+        return not(self.broken) or self.tfinal > t
+
+class Spacer(Rod):
+    def __init__(self, targetParticle1, targetParticle2, length):
+        super().__init__(targetParticle1, targetParticle2, length)
+
+        self.tfinal = 1e20
+        self.broken=False
+
+    def addOwnForce(self, strength, t):
+        super().addOwnForce(strength, t)
+    
+        if not(self.broken) and strength < 0:
+            self.broken = True
+            self.tfinal = t
+
+    def isActive(self, t):
+        return not(self.broken) or self.tfinal > t
+
+
 class SliderOnBackground(Constraint):
     def __init__(self, targetParticle, normalVector, distance):
         self.target=targetParticle
@@ -135,14 +187,31 @@ class SliderOnBackground(Constraint):
     def correctingAccelerationNeeded(self):
         return -(self.normal.getT()*self.target.f).item(0)/self.target.m
 
-    def addOwnForce(self, strength):
+    def addOwnForce(self, strength, t):
         #print "strength" ,strength
         self.target.f = self.target.f + strength*self.normal
 
     def calculateEffect(self, other):
         #print "calculatedeffect",(self.normal.getT()*other.affects(self.target)).item(0)
         return (self.normal.getT()*other.affects(self.target)).item(0)
+
+class OneWaySlider(SliderOnBackground):
+    def __init__(self, targetParticle, normalVector, distance):
+        super().__init__(targetParticle, normalVector, distance)
+        
+        self.tfinal = 1e20
+        self.broken=False
+       
     
+    def addOwnForce(self, strength, t):
+        super().addOwnForce(strength, t)
+    
+        if not(self.broken) and strength < 0:
+            self.broken = True
+            self.tfinal = t
+
+    def isActive(self, t):
+        return not(self.broken) or self.tfinal > t
             
                             
             
@@ -177,10 +246,21 @@ class ParticleSystem:
         newrod=Rod(self.particleList[n1], self.particleList[n2], length)
         self.constraintForces.append(newrod)
         newrod.ind=len(self.constraintForces) - 1
-        return newrod.ind        
+        return newrod.ind       
+    def addSling(self, n1, n2, length):
+        newSling=Sling(self.particleList[n1], self.particleList[n2], length)
+        self.constraintForces.append(newSling)
+        newSling.ind=len(self.constraintForces) - 1
+        return newSling.ind       
+
 
     def addSlider(self, n, normalvector, distance):
         newslider=SliderOnBackground(self.particleList[n], normalvector, distance)
+        self.constraintForces.append(newslider)
+        newslider.ind=len(self.constraintForces ) - 1     
+
+    def addOneWaySlider(self, n, normalvector, distance):
+        newslider=OneWaySlider(self.particleList[n], normalvector, distance)
         self.constraintForces.append(newslider)
         newslider.ind=len(self.constraintForces ) - 1     
 
@@ -215,34 +295,33 @@ class ParticleSystem:
                             [0.0]])
             i=i+4
 
-    def calculateNonConstraintForces(self):
+    def calculateNonConstraintForces(self, t):
         for eachForce in self.nonConstraintForces:
             eachForce.addOwnForce()
     
-    def calculateConstraintForces(self, damn_update=True):
+    def calculateConstraintForces(self, t, damn_update=True):
+
+        activeConstraints = [constraint for constraint in self.constraintForces if constraint.isActive(t)]
         correctingAccelerationsNeeded=[]
-        for c in self.constraintForces:
+        for c in activeConstraints:
             correctingAccelerationsNeeded.append(c.correctingAccelerationNeeded())
 
         D=np.matrix(correctingAccelerationsNeeded).getT()
         
-        numConstraints=len(self.constraintForces)
+        numConstraints=len(activeConstraints)
         A=np.matrix(np.zeros([numConstraints, numConstraints]))
         
 
         for i in range(numConstraints):
             for j in range(numConstraints):
-                A[i,j]=self.constraintForces[j].calculateEffect(self.constraintForces[i])      
-        try:
-            magnitudes = (A**(-1))*D
-        except ImportError:
-            print("singular trebuchet")
-            self.numCalls=1000000000
-            return
+                A[i,j]=activeConstraints[j].calculateEffect(activeConstraints[i])      
+        
+        magnitudes = (A**(-1))*D
+        
 
         if damn_update:
             for i in range(numConstraints):
-                self.constraintForces[i].addOwnForce(magnitudes.item(i))
+                activeConstraints[i].addOwnForce(magnitudes.item(i), t)
 
     def checkLegality(self):
         correctingAccelerationsNeeded=[]
@@ -270,8 +349,8 @@ class ParticleSystem:
             return np.zeros(len(y))
         
         self.fillFromStateVector(y)
-        self.calculateNonConstraintForces()
-        self.calculateConstraintForces()
+        self.calculateNonConstraintForces(t)
+        self.calculateConstraintForces(t)
 
         derivatives=[]
 

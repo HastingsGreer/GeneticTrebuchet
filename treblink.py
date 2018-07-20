@@ -127,10 +127,12 @@ class LinkTrebuchet:
                 ]
 
     def check_continuous(self):
+        hasPin = False
         if "Pin()" in [repr(constraint) for constraint in self.tLinkList[0].constraints]:
             return False
         for idx, link in enumerate(self.tLinkList):
             if "Pin()" in [repr(constraint) for constraint in link.constraints]:
+                hasPin = True
                 constraints_prev = [repr(constraint) for constraint in self.tLinkList[idx - 1].constraints]
 
                 if idx == len(self.tLinkList) - 1:
@@ -143,12 +145,12 @@ class LinkTrebuchet:
                         return False
                     constraints_prev = [repr(constraint) for constraint in self.tLinkList[idx - 2].constraints]
                     if not (("Rod(3)" in constraints_prev) or ("Rod(4)" in constraints_prev)):
-                        
+
                         return False
                     if idx == len(self.tLinkList) - 2:
                         return False
-        return True
-    def evaluate(self, savesystem = False, surface = None):
+        return hasPin
+    def evaluate(self, savesystem = False, surface = None, debug=False):
         
         
         if (str(self) in trebuchetarchive) and not savesystem:              #checks if has been tried before, uses previous result if so.
@@ -177,12 +179,13 @@ class LinkTrebuchet:
                                               [-9.8]]))
         
         
-        for pair in zip(particles[1:], particles[:-1]):
+        for pair in zip(particles[1:-1], particles[:-2]):
             sling = system.addRod(pair[0], pair[1], 42)    #I want sling to be the last of this set of rods
         
-        
-        
-        
+        sling = system.addSling(particles[-1], particles[-2], 42)
+        if system.particleList[particles[-1]].r[1] < system.particleList[particles[-2]].r[1]:
+            system.addOneWaySlider(particles[-1], np.matrix([[0.0],
+                                                      [1.0]]), 1)
         
         for link , n in zip(self.tLinkList, list(range(len(self.tLinkList)))):
             link.addConstraints(n, particles, system)
@@ -194,12 +197,12 @@ class LinkTrebuchet:
         try:
             if doAnimation:
                 myAnimation = animation.Animation(system, DISPLAYSURF)
-                myAnimation.simanimate()
+                myAnimation.simanimate(tfinal=4.5)
             else:
-                system.simulate()
+                system.simulate(tfinal=4.5)
                 myAnimation = system
         except np.linalg.linalg.LinAlgError:
-            print("singular trebuchet")
+            #print("singular trebuchet")
             trebuchetarchive[str(self)] = -1
             return -1
         miny=max(np.array(myAnimation.ys)[0])-min((np.array(myAnimation.ys)).flatten())                            #total height
@@ -221,14 +224,14 @@ class LinkTrebuchet:
         vxa=np.array(vx)
 
         maxxy=np.max(vxa.flatten())
-    
-        print(miny)
-        print(maxxy)
-        print(("efficiency:", maxxy/(9.8*400*miny)))
+        if debug:
+            print(miny)
+            print(maxxy)
+            print(("efficiency:", maxxy/(9.8*400*miny)))
     
         if savesystem==True:
             return myAnimation
-        trebuchetarchive[str(self)]=maxxy/(9.8*1000*miny)
+        trebuchetarchive[str(self)]=maxxy/(9.8*400*miny)
         
     
         return trebuchetarchive[str(self)]
