@@ -1,5 +1,10 @@
 
 import random
+from multiprocessing import Pool
+
+def multithread_evaluate_individual(indv):
+    indv.evaluate()
+    return indv.score
 
 MAXIMIZE, MINIMIZE = 11, 22
 
@@ -91,10 +96,11 @@ class Environment(object):
         self.mutation_rate = mutation_rate
         self.maxgenerations = maxgenerations
         self.generation = 0
+        self.pool = Pool(7)
         self.report()
 
     def _makepopulation(self):
-        return [self.kind() for individual in 4*range(self.size)]
+        return [self.kind() for individual in 4*list(range(self.size))]
     
     def run(self):
         while not self._goal():
@@ -105,13 +111,15 @@ class Environment(object):
                self.best.score == self.optimum
     
     def step(self):
-        self.population.sort()
+        self.population.sort(key = lambda indv: -indv.score)
+        self.report()
         self._crossover()
         self.generation += 1
-        self.report()
+        
     
     def _crossover(self):
         next_population = [self.best.copy()]
+        next_population = []
         while len(next_population) < self.size:
             mate1 = self._select()
             if random.random() < self.crossover_rate:
@@ -121,8 +129,13 @@ class Environment(object):
                 offspring = [mate1.copy()]
             for individual in offspring:
                 self._mutate(individual)
-                individual.evaluate(self.optimum)
+                #individual.evaluate(self.optimum)
                 next_population.append(individual)
+        
+        scores = self.pool.map(multithread_evaluate_individual, next_population)
+
+        for indv, score in zip(next_population, scores):
+            indv.score = score 
         self.population = next_population[:self.size]
 
     def _select(self):
@@ -139,7 +152,7 @@ class Environment(object):
     #
     def _tournament(self, size=8, choosebest=0.90):
         competitors = [random.choice(self.population) for i in range(size)]
-        competitors.sort()
+        competitors.sort(key=lambda indv: -indv.score)
         if random.random() < choosebest:
             return competitors[0]
         else:
@@ -153,9 +166,10 @@ class Environment(object):
     best = property(**best())
 
     def report(self):
-        print "="*70
-        print "generation: ", self.generation
-        print "best:       ", self.best
+        print("="*70)
+        print("generation: ", self.generation)
+        print("best:       ", self.best)
+        print("score:      ", self.best.score)
 
 
 

@@ -13,11 +13,18 @@ def drawParticle(particle, surface, transform, thickness=4):
         
 def drawRod(rod, surface, transform, thickness=4):
     color = (255,0,0)
-    pygame.draw.line(surface, color, transform(rod.target1.r), 
+    try:
+        pygame.draw.line(surface, color, transform(rod.target1.r), 
                      transform(rod.target2.r), thickness)
-            
+    except: 
+        print( "Rod Draw error:", transform(rod.target1.r), transform(rod.target2.r))
+    
 def drawSlider(slider, surface, transform, color=(0,0,255), thickness=4):
-    pygame.draw.line(surface, color, transform(slider.target.r+np.matrix([[0.0,40.0],[-40.0,0.0]])*slider.normal), transform(slider.target.r+np.matrix([[0.0,-40.0],[40.0,0.0]])*slider.normal), thickness)
+    try:
+        pygame.draw.line(surface, color, transform(slider.target.r+np.matrix([[0.0,40.0],[-40.0,0.0]])*slider.normal), transform(slider.target.r+np.matrix([[0.0,-40.0],[40.0,0.0]])*slider.normal), thickness)
+    except: 
+        print( "Rod Draw error:", transform(rod.target1.r), transform(rod.target2.r))
+            
         
         
         
@@ -35,7 +42,7 @@ class Animation():
         
     def makeVideo(self, solution, filename):
         for n, x in enumerate(solution):
-            drawConstraintsAndParticles(x)
+            self.drawConstraintsAndParticles(x)
             pygame.display.update()
             pygame.image.save(self.DISPLAYSURF, "tmp/"+filename+str(n)+".jpg")
             
@@ -56,14 +63,14 @@ class Animation():
         self.y0=self.system.fillStateVector()
         self.time = np.linspace(0.0, tfinal, steps)
         self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time, rtol=1e-3, atol=1e-3, mxstep=40)
-        print "numCalls:", self.system.numCalls
+        print(("numCalls:", self.system.numCalls))
         
         self.xs=[]
         self.ys=[]
         for point in self.solution:
             pointxs=[]
             pointys=[]
-            for j in range(len(point)/4):
+            for j in range(len(point)//4):
                 pointxs.append(point[4*j])
                 pointys.append(point[4*j+1])
             
@@ -75,10 +82,12 @@ class Animation():
 
         self.drawConstraintsAndParticles(y)
         pygame.display.update()
+        pygame.event.get()
         return result
 
     def animate(self, pathpoints):
         for point in pathpoints:
             self.drawConstraintsAndParticles(point)
             pygame.display.update()
+            pygame.event.get()
             time.sleep(.0051)

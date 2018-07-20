@@ -12,7 +12,7 @@ try:
     import pygame
     from pygame.locals import *
     DISPLAYSURF=pygame.display.set_mode((300,400))
-except:
+except ImportError:
     doAnimation = False
 
 
@@ -41,7 +41,7 @@ class Slider(Constraint):
 class Rod(Constraint):
     def __init__(self, disp = "RANDOM"):
         if disp == "RANDOM":
-            disp = random.choice((2, 3))
+            disp = random.choice((2, 3, 4))
         self.disp = disp
     def addToSystem(self, n, particles, system):
         if n + self.disp < len(particles) - 1:
@@ -59,7 +59,7 @@ class Pin(Constraint):
     def __repr__(self):
         return "Pin()"
 def newConstraint():
-    return random.choice((Rod(), Rod(), Pin(), Slider()))
+    return random.choice((Rod(), Rod(), Pin()))
         
 class TrebLink:
     def __init__(self, angle, length, constraints):
@@ -77,20 +77,24 @@ class TrebLink:
     
     
     def mutate(self):
-        a = random.choice((1, 2, 3, 4))
+        a = random.choice((1, 1, 1, 2, 2, 2, 3, 4))
         if a == 1:
-            length = self.length + random.uniform(-2, 2)
+            length = self.length * random.uniform(.9, 1.1)
             if 10< length < 1:
                 length = 10*random.random()
             return TrebLink(self.angle, length, self.constraints)
         elif a == 2:
-            angle = self.angle + (.5-random.random())
+            angle = self.angle + .1 * (.5-random.random())
             return TrebLink(angle, self.length, self.constraints)
         elif a == 3:
             return TrebLink(self.angle, self.length, self.constraints and random.sample(self.constraints, len(self.constraints)-1))
         elif a == 4:
-            return TrebLink(self.angle, self.length, self.constraints + [newConstraint()])
-            
+            canidate_constraint = newConstraint()
+            if repr(canidate_constraint) not in [repr(constraint) for constraint in self.constraints]:
+
+                return TrebLink(self.angle, self.length, self.constraints + [newConstraint()])
+            else:
+                return TrebLink(self.angle, self.length, self.constraints)
          
                 
                
@@ -118,23 +122,51 @@ class LinkTrebuchet:
         n = random.randint(0, len(self.tLinkList)-1)
         m = random.randint(0, len(other.tLinkList)-1)
         return [
-                LinkTrebuchet((self.tLinkList[:n] + other.tLinkList[m:])[:10]),
-                LinkTrebuchet((other.tLinkList[m:] + self.tLinkList[:n])[:10]),
+                LinkTrebuchet((self.tLinkList[:n] + other.tLinkList[m:])[:8]),
+                LinkTrebuchet((other.tLinkList[m:] + self.tLinkList[:n])[:8]),
                 ]
+
+    def check_continuous(self):
+        if "Pin()" in [repr(constraint) for constraint in self.tLinkList[0].constraints]:
+            return False
+        for idx, link in enumerate(self.tLinkList):
+            if "Pin()" in [repr(constraint) for constraint in link.constraints]:
+                constraints_prev = [repr(constraint) for constraint in self.tLinkList[idx - 1].constraints]
+
+                if idx == len(self.tLinkList) - 1:
+                    return False
+
+                if not (
+                        ("Rod(2)" in constraints_prev) or ("Rod(3)" in constraints_prev) or ("Rod(4)" in constraints_prev)
+                ):
+                    if idx == 1:
+                        return False
+                    constraints_prev = [repr(constraint) for constraint in self.tLinkList[idx - 2].constraints]
+                    if not (("Rod(3)" in constraints_prev) or ("Rod(4)" in constraints_prev)):
+                        
+                        return False
+                    if idx == len(self.tLinkList) - 2:
+                        return False
+        return True
     def evaluate(self, savesystem = False, surface = None):
         
         
         if (str(self) in trebuchetarchive) and not savesystem:              #checks if has been tried before, uses previous result if so.
-            print "efficiency", trebuchetarchive[str(self)]
+            print(("efficiency", trebuchetarchive[str(self)]))
             return trebuchetarchive[str(self)]
+
+
+
+        if not(self.check_continuous()):
+            return -.5
         
         
         system=calculatemotion.ParticleSystem()
         position = np.array([0.0, 0.0])
         angle = 0.0
         particles = []
-        for link in self.tLinkList:
-            particles = particles + [system.addParticle(1000 if (len(particles)==0) else 10, position[0], position[1], 0, 0, color = (255, 0, 0))]
+        for idx, link in enumerate(self.tLinkList):
+            particles = particles + [system.addParticle(400 if idx==0 else (5 if idx == len(self.tLinkList) - 1 else 10), position[0], position[1], 0, 0, color = (255, 0, 0))]
             angle = angle + link.angle
             position = position + link.length*np.array([np.cos(angle),np.sin(angle)])
                                                                
@@ -152,19 +184,24 @@ class LinkTrebuchet:
         
         
         
-        for link , n in zip(self.tLinkList, range(len(self.tLinkList))):
+        for link , n in zip(self.tLinkList, list(range(len(self.tLinkList)))):
             link.addConstraints(n, particles, system)
         
         def endCondition(sys, y):
+            return False
             return (sys.constraintForces[sling]).strength < -5
         system.endCondition = endCondition
-        
-        if doAnimation:
-            myAnimation = animation.Animation(system, DISPLAYSURF)
-            myAnimation.simanimate()
-        else:
-            system.simulate()
-            myAnimation = system
+        try:
+            if doAnimation:
+                myAnimation = animation.Animation(system, DISPLAYSURF)
+                myAnimation.simanimate()
+            else:
+                system.simulate()
+                myAnimation = system
+        except np.linalg.linalg.LinAlgError:
+            print("singular trebuchet")
+            trebuchetarchive[str(self)] = -1
+            return -1
         miny=max(np.array(myAnimation.ys)[0])-min((np.array(myAnimation.ys)).flatten())                            #total height
 
 
@@ -172,29 +209,29 @@ class LinkTrebuchet:
         
         
         #Suppress individuals that spin around too much:
-        
-        angles = np.unwrap(np.arctan2(myAnimation.solution[:, -4] - myAnimation.solution[:, -8],
+        """
+        np.arctan2(myAnimation.solution[:, -4] - myAnimation.solution[:, -8],
                                       myAnimation.solution[:, -3] - myAnimation.solution[:, -7]))
-        for n in xrange(len(myAnimation.solution)):
+        for n in range(len(myAnimation.solution)):
             if abs(angles[n]) > 3 * np.pi:
-                for k in xrange(n, len(myAnimation.solution)):        
+                for k in range(n, len(myAnimation.solution)):        
                     vx[k] = 0 
-    
+        """
 
         vxa=np.array(vx)
 
         maxxy=np.max(vxa.flatten())
     
-        print miny
-        print maxxy
-        print "efficiency:", maxxy/(9.8*1000*miny)
+        print(miny)
+        print(maxxy)
+        print(("efficiency:", maxxy/(9.8*400*miny)))
     
         if savesystem==True:
             return myAnimation
         trebuchetarchive[str(self)]=maxxy/(9.8*1000*miny)
         
     
-        return maxxy/(9.8*1000*miny)
+        return trebuchetarchive[str(self)]
         
 if __name__ == "__main__":
     firstLink = TrebLink(pi/2, 3, [])
@@ -205,7 +242,7 @@ if __name__ == "__main__":
     lt2 = lt
     for n in range(1):
         lt2=lt2.mutate()
-    print lt2
+    print(lt2)
     lt2.evaluate()
     
         

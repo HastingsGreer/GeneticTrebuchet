@@ -18,7 +18,7 @@ class Particle:
 
 class Force:
     def addOwnForce(self):
-        print "you forgot to redefine addOwnForce"
+        print("you forgot to redefine addOwnForce")
 
 class Gravity(Force):
     def __init__(self, targetParticle, forceVector):
@@ -235,8 +235,10 @@ class ParticleSystem:
                 A[i,j]=self.constraintForces[j].calculateEffect(self.constraintForces[i])      
         try:
             magnitudes = (A**(-1))*D
-        except:
+        except ImportError:
+            print("singular trebuchet")
             self.numCalls=1000000000
+            return
 
         if damn_update:
             for i in range(numConstraints):
@@ -286,13 +288,13 @@ class ParticleSystem:
         self.time = np.linspace(0.0, tfinal, steps)
         self.solution=scipy.integrate.odeint(self.dydt, self.y0, self.time, rtol =1e-3, atol=1e-3, mxstep=40)
 
-        print "numcalls" ,self.numCalls
+        print(("numcalls" ,self.numCalls))
         self.xs=[]
         self.ys=[]
         for point in self.solution:
             pointxs=[]
             pointys=[]
-            for j in range(len(point)/4):
+            for j in range(len(point)//4):
                 pointxs.append(point[4*j])
                 pointys.append(point[4*j+1])
             
